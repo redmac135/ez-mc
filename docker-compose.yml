@@ -7,6 +7,7 @@ services:
       args:
         MC_UID: ${MC_UID:-1000}
         MC_GID: ${MC_GID:-1000}
+        MC_VERSION: ${MC_VERSION}
 
     ports:
       - "${MC_PORT}:25565"
