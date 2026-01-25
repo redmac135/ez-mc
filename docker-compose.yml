@@ -1,16 +1,12 @@
-
 services:
   minecraft:
-    container_name: purpur-server
+    container_name: mc-server
     build:
       context: .
       args:
         MC_UID: ${MC_UID:-1000}
         MC_GID: ${MC_GID:-1000}
         MC_VERSION: ${MC_VERSION}
-
-    ports:
-      - "${MC_PORT}:25565"
 
     environment:
       RAM: "3G"
@@ -44,3 +40,16 @@ services:
     restart: unless-stopped
     stdin_open: true
     tty: true
+
+  playit:
+    image: ghcr.io/playit-cloud/playit-agent:0.16
+    network_mode: "service:minecraft"
+    environment:
+      - SECRET_KEY=${PLAYIT_SECRET}
+      - TZ=America/Toronto
+    restart: unless-stopped
+    volumes:
+      - playit-data:/root
+
+volumes:
+  playit-data:

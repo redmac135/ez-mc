@@ -9,6 +9,14 @@ ENV MC_UID=${MC_UID}
 ENV MC_GID=${MC_GID}
 ENV MC_VERSION=${MC_VERSION}
 
+# =======================================
+# HARD VERSION CHECK (GEYSER REQUIREMENT)
+# =======================================
+RUN if [ "${MC_VERSION}" != "1.21.11" ]; then \
+	echo "ERROR: Geyser requires Minecraft 1.21.11. You set MC_VERSION=${MC_VERSION}"; \
+	exit 1; \
+	fi
+
 # dependencies
 RUN apt-get update \
 	&& apt-get install -y net-tools curl ca-certificates jq \
@@ -29,32 +37,58 @@ RUN curl -L \
 # verify download
 RUN test -s /server/purpur.jar
 
+# =======================================
+# PLUGINS
+# =======================================
+
 # download plugins
 RUN mkdir -p /server/plugins
 
+# WorldEdit
 RUN curl -s https://api.modrinth.com/v2/project/worldedit/version \
- | jq -r '.[] \
- 	| select(.game_versions[]=="'${MC_VERSION}'") \
+	| jq -r '.[] \
+	| select(.game_versions[]=="'${MC_VERSION}'") \
 	| select(.loaders[]=="paper") \
 	| .files[0] \
 	| select(.primary==true) \
 	| .url' \
- | head -n 1 \
- | xargs curl -L -o /server/plugins/worldedit.jar
+	| head -n 1 \
+	| xargs curl -L -o /server/plugins/worldedit.jar
 
 RUN test -s /server/plugins/worldedit.jar
 
+# Chunky
 RUN curl -s https://api.modrinth.com/v2/project/chunky/version \
- | jq -r '.[] \
- 	| select(.game_versions[]=="'${MC_VERSION}'") \
+	| jq -r '.[] \
+	| select(.game_versions[]=="'${MC_VERSION}'") \
 	| select(.loaders[]=="paper") \
 	| .files[0] \
 	| select(.primary==true) \
 	| .url' \
- | head -n 1 \
- | xargs curl -L -o /server/plugins/chunky.jar
+	| head -n 1 \
+	| xargs curl -L -o /server/plugins/chunky.jar
 
 RUN test -s /server/plugins/chunky.jar
+
+# Geyser
+RUN curl -L \
+	"https://download.geysermc.org/v2/projects/geyser/versions/latest/builds/latest/downloads/spigot" \
+	-o /server/plugins/geyser.jar \
+	&& test -s /server/plugins/geyser.jar
+
+RUN test -s /server/plugins/geyser.jar
+
+# Floodgate
+RUN curl -L \
+	"https://download.geysermc.org/v2/projects/floodgate/versions/latest/builds/latest/downloads/spigot" \
+	-o /server/plugins/floodgate.jar \
+	&& test -s /server/plugins/floodgate.jar
+
+RUN test -s /server/plugins/floodgate.jar
+
+# =======================================
+# ENTRYPOINT AND HEALTHCHECK
+# =======================================
 
 # entrypoint and healthcheck scripts
 COPY entrypoint.sh /server/
@@ -63,6 +97,10 @@ COPY healthcheck.sh /server/
 # root ownership and permissions
 RUN chmod +x /server/*.sh \
 	&& chown -R root:root /server
+
+# =======================================
+# RUNTIME
+# =======================================
 
 # data volume
 VOLUME "/data"
@@ -77,6 +115,6 @@ ENV JAVAFLAGS=""
 USER steve
 
 HEALTHCHECK --interval=1m --timeout=3s \
-  CMD [ "/server/healthcheck.sh" ]
+	CMD [ "/server/healthcheck.sh" ]
 
 ENTRYPOINT [ "/server/entrypoint.sh" ]
